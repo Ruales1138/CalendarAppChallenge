@@ -50,7 +50,7 @@ class Event:
 class Day:
     def __init__(self, date_: date):
         self.date_: date = date_
-        self.slots: dict[time, str | None] = {}
+        self.slots = {time(hour, minute): None for hour in range(24) for minute in range(0, 60, 15)}
 
     def _init_slots(self):
         pass
@@ -101,6 +101,7 @@ class Day:
 # TODO: Implement Calendar class here
 class Calendar:
     def __init__(self):
+        self.days: dict[date, Day] = {}
         self.events: dict[str, Event] = {}
 
     def add_event(self, title: str, description: str, date_: date, start_at: time, end_at: time):
