@@ -9,12 +9,10 @@ from app.services.util import generate_unique_id, date_lower_than_today_error, e
 # TODO: Implement Reminder class here
 @dataclass
 class Reminder:
-    EMAIL = "email"
-    SYSTEM = "system"
-
-    def __init__(self, date_time: datetime, type: str = EMAIL):
-        self.date_time: datetime = date_time
-        self.type: str = type
+    EMAIL: ClassVar[str] = "email"
+    SYSTEM: ClassVar[str] = "system"
+    date_time: datetime
+    type: str = EMAIL
 
     def __str__(self) -> str:
         return f"Reminder on {self.date_time} of type {self.type}"
@@ -23,17 +21,16 @@ class Reminder:
 # TODO: Implement Event class here
 @dataclass
 class Event:
-    def __init__(self, title: str, description: str, date_: date, start_at: time, end_at: time, id: str = None):
-        self.title: str = title
-        self.description: str = description
-        self.date_: date = date_
-        self.start_at: time = start_at
-        self.end_at: time = end_at
-        self.reminders: list[Reminder] = []
-        self.id: str = generate_unique_id()
+    title: str
+    description: str
+    date_: date
+    start_at: time
+    end_at: time
+    reminders: list[Reminder] = field(init=False, default_factory=list)
+    id: str = field(default_factory=generate_unique_id)
 
-    def add_reminder(self, date_time: datetime, reminder_type: str = Reminder.EMAIL):
-        reminder = Reminder(date_time=date_time, type=reminder_type)
+    def add_reminder(self, date_time: datetime, type_: str = Reminder.EMAIL):
+        reminder = Reminder(date_time=date_time, type=type_)
         self.reminders.append(reminder)
 
     def delete_reminder(self, reminder_index: int):
@@ -43,30 +40,28 @@ class Event:
             reminder_not_found_error()
 
     def __str__(self) -> str:
-        return f'ID: {self.id} Event title: {self.title} Description: {self.description} Time: {self.start_at} - {self.end_at}'
+        return f'ID: {self.id}\nEvent title: {self.title}\nDescription: {self.description}\nTime: {self.start_at} - {self.end_at}'
 
 
 # TODO: Implement Day class here
 class Day:
     def __init__(self, date_: date):
         self.date_: date = date_
-        self.slots = {time(hour, minute): None for hour in range(24) for minute in range(0, 60, 15)}
+        self.slots = dict[time, str | None] = {}
+        self._init_slots()
 
     def _init_slots(self):
-        pass
+        for hour in range(24):
+            for minute in range(0, 60, 15):
+                self.slots[time(hour, minute)] = None
 
     def add_event(self, event_id: str, start_at: time, end_at: time):
-        current_time = start_at
-        while current_time < end_at:
-            if self.slots.get(current_time) is not None:
-                slot_not_available_error()
-                return
-            current_time = self._increment_time(current_time)
-
-        current_time = start_at
-        while current_time < end_at:
-            self.slots[current_time] = event_id
-            current_time = self._increment_time(current_time)
+        for slot in self.slots:
+            if start_at <= slot < end_at:
+                if self.slots[slot]:
+                    slot_not_available_error()
+                else:
+                    self.slots[slot] = event_id
 
     def delete_event(self, event_id: str):
         deleted = False
@@ -105,13 +100,38 @@ class Calendar:
         self.events: dict[str, Event] = {}
 
     def add_event(self, title: str, description: str, date_: date, start_at: time, end_at: time):
-        pass
+        if date_ < date(2024, 4, 1):   # if date_ < datetime.now().date():
+            date_lower_than_today_error()
+
+        if date_ not in self.days:
+            self.days[date_] = Day(date_)
+
+        event = Event(title, description, date_, start_at, end_at)
+        self.days[date_].add_event(event.id, start_at, end_at)
+        self.events[event.id] = event
+
+        return event.id
 
     def add_reminder(self, event_id: str, date_time: datetime, type_: str):
-        pass
+        event = self.events.get(event_id)
+        if event is None:
+            event_not_found_error()
+        else:
+            event.add_reminder(date_time, type_)
 
     def find_available_slots(self, date_: date) -> list[time]:
-        pass
+        available_slots = []
+        day = self.days.get(date_)
+
+        if day is not None:
+            for slot, event in day.slots.items():
+                if event is None:
+                    available_slots.append(slot)
+        else:
+            day = Day(date_)
+            available_slots = list(day.slots.keys())
+
+
 
     def update_event(self, event_id: str, title: str, description: str, date_: date, start_at: time, end_at: time):
         event = self.events[event_id]
@@ -175,3 +195,5 @@ class Calendar:
             event_not_found_error()
 
         return event.reminders
+
+# 17/09/2024
