@@ -26,9 +26,31 @@ class Event:
     date_: date
     start_at: date
     end_at: date
-    #reminders: list[Reminder] = []
+    reminders: list[Reminder] = field(init=False, default_factory=list)
+    id: str = field(default_factory=generate_unique_id)
+
+    def add_reminder(self, date_time: datetime, type_: str):
+        reminder = Reminder(date_time = date_time, type = type_)
+        self.reminders.append(reminder)
+
+    def delete_reminder(self, reminder_index: int):
+        if 0 <= reminder_index < len(self.reminders):
+            del self.reminders[reminder_index]
+        else:
+            reminder_not_found_error()
+
+    def __str__(self) -> str:
+        return (f'ID: {self.id}'
+                f' Event title: {self.title} '
+                f'Description: {self.description} '
+                f'Time: {self.start_at} - {self.end_at}')
+
 
 # TODO: Implement Day class here
+class Day:
+    def __init__(self, date_:date):
+        self.date_: date = date_
+        self.slots: dict[time, str | None] = {}
 
 
 # TODO: Implement Calendar class here
